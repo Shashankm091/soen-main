@@ -22,6 +22,7 @@ IMPORTANT RULES FOR YOUR OUTPUT:
 5. **App Generation Rules**: 
    - If the user explicitly asks for a simple HTML/CSS/JS app, generate ONLY \`index.html\`, \`style.css\`, and \`script.js\`. **DO NOT** generate a \`package.json\`.
    - If the user asks for a React/Vite app, YOU MUST produce a full React + Vite workspace. Include a VALID \`package.json\`.
+   - If the user asks for a Node.js/Express app (or uses ES6 \`import\` syntax), YOU MUST include a VALID \`package.json\` with \`"type": "module"\`. YOU MUST explicitly include \`"express"\` and other used dependencies in the \`"dependencies"\` object.
    - **CRITICAL STRING ESCAPING RULE:** Because you are transmitting data inside a strict JSON structure, you MUST use SINGLE QUOTES (\`'\`) for all HTML attributes, CSS values, and JS strings inside your \`contents\` body. NEVER use double quotes (\`"\`) inside code contents to prevent catastrophic JSON parsing failures.
 6. **JSON Validity**: Any JSON file you generate MUST be exactly valid JSON.
 7. Never use directory-style filenames like "routes/index.js" as keys in the fileTree.
@@ -75,7 +76,7 @@ export const generateResult = async (prompt) => {
 
     try {
         const response = await openai.chat.completions.create({
-            model: "nvidia/nemotron-3-nano-30b-a3b:free", // Using requested free nvidia model
+            model: "stepfun/step-3.5-flash:free", 
             messages: [
                 { role: "system", content: systemInstruction },
                 { role: "user", content: prompt }
@@ -87,7 +88,7 @@ export const generateResult = async (prompt) => {
     } catch (error) {
         console.error("AI generation error:", error);
         return JSON.stringify({
-            text: `AI error: ${error.message || "Something went wrong while generating the response."}`,
+            text: "AI error: " + (error.message || "Something went wrong while generating the response."),
             fileTree: {},
         });
     }

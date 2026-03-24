@@ -12,7 +12,9 @@ export const createUserController = async (req, res) => {
         return res.status(400).json({ errors: errors.array() });
     }
     try {
-        const user = await userService.createUser(req.body);
+        const email = String(req.body.email || '').trim().toLowerCase()
+        const password = req.body.password
+        const user = await userService.createUser({ email, password });
 
         const token = await user.generateJWT();
 
@@ -20,7 +22,7 @@ export const createUserController = async (req, res) => {
 
         res.status(201).json({ user, token });
     } catch (error) {
-        res.status(400).send(error.message);
+        res.status(400).json({ message: error.message });
     }
 }
 
@@ -33,7 +35,8 @@ export const loginController = async (req, res) => {
 
     try {
 
-        const { email, password } = req.body;
+        const email = String(req.body.email || '').trim().toLowerCase()
+        const { password } = req.body;
 
         const user = await userModel.findOne({ email }).select('+password');
 
@@ -62,7 +65,7 @@ export const loginController = async (req, res) => {
 
         console.log(err);
 
-        res.status(400).send(err.message);
+        res.status(400).json({ message: err.message });
     }
 }
 
@@ -77,7 +80,7 @@ export const profileController = async (req, res) => {
 export const logoutController = async (req, res) => {
     try {
 
-        const token = req.cookies.token || req.headers.authorization.split(' ')[ 1 ];
+        const token = req.cookies.token || req.headers.authorization.split(' ')[1];
 
         redisClient.set(token, 'logout', 'EX', 60 * 60 * 24);
 
@@ -88,7 +91,7 @@ export const logoutController = async (req, res) => {
 
     } catch (err) {
         console.log(err);
-        res.status(400).send(err.message);
+        res.status(400).json({ message: err.message });
     }
 }
 

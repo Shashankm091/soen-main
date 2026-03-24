@@ -12,7 +12,11 @@ const messageSchema = new mongoose.Schema({
     },
     message: {
         type: String,
-        required: true
+        default: ""
+    },
+    attachment: {
+        type: Object,
+        default: null
     }
 }, { timestamps: true });
 

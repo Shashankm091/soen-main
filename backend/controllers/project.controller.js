@@ -152,7 +152,7 @@ export const deleteProject = async (req, res) => {
             projectId,
             userId: loggedInUser._id
         });
-        
+
         await messageModel.deleteMany({ project: projectId });
 
         return res.status(200).json({ project, message: "Project deleted successfully" });

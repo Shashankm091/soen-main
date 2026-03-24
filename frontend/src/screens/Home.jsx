@@ -2,11 +2,11 @@ import React, { useContext, useState, useEffect } from 'react'
 import { UserContext } from '../context/user.context'
 import axios from "../config/axios"
 import { useNavigate } from 'react-router-dom'
-import { Plus, Users, Trash2 } from 'lucide-react'
+import { Plus, Users, Trash2, LogOut } from 'lucide-react'
 
 const Home = () => {
 
-    const { user } = useContext(UserContext)
+    const { user, setUser } = useContext(UserContext)
     const [ isModalOpen, setIsModalOpen ] = useState(false)
     const [ projectName, setProjectName ] = useState('')
     const [ project, setProject ] = useState([])
@@ -14,6 +14,12 @@ const Home = () => {
     const [ loadingId, setLoadingId ] = useState(null)
 
     const navigate = useNavigate()
+
+    function logout() {
+        localStorage.removeItem('token')
+        setUser(null)
+        navigate('/login')
+    }
 
     function fetchProjects() {
         axios.get('/projects/all').then((res) => {
@@ -67,11 +73,18 @@ const Home = () => {
             <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] pointer-events-none"></div>
             <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none"></div>
             
-            <header className="mb-10 relative z-10 flex justify-between items-end">
+            <header className="mb-10 relative z-10 flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Your Workspace</h1>
                     <p className="text-slate-400 mt-2">Welcome back, {user?.email}</p>
                 </div>
+                <button 
+                    onClick={logout}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-900/50 hover:bg-red-500/10 border border-slate-700 hover:border-red-500/50 text-slate-400 hover:text-red-400 rounded-lg transition-all duration-300 group"
+                >
+                    <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+                    <span className="font-medium">Logout</span>
+                </button>
             </header>
 
             <div className="projects grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 relative z-10">

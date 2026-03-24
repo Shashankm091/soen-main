@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import http from 'http';
+import connectDB from './db/db.js';
 import app from './app.js';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
@@ -10,7 +11,13 @@ import { generateResult } from './services/ai.service.js';
 
 const port = process.env.PORT || 3000;
 
-
+try {
+    await connectDB();
+} catch (err) {
+    console.error('Failed to connect to MongoDB:', err.message);
+    console.error('Check MONGODB_URI, Atlas IP whitelist (Network Access), and cluster status.');
+    process.exit(1);
+}
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -83,59 +90,67 @@ io.on('connection', socket => {
     });
 
     socket.on('project-message', async data => {
+        try {
+            const message = data.message || "";
+            const aiIsPresentInMessage = message.includes('@ai');
 
-        const message = data.message;
-        const aiIsPresentInMessage = message.includes('@ai');
-
-        // Save incoming user message
-        const savedUserMessage = await messageModel.create({
-            project: socket.roomId,
-            sender: {
-                _id: socket.user._id,
-                email: socket.user.email
-            },
-            message: message
-        });
-
-        socket.broadcast.to(socket.roomId).emit('project-message', {
-            ...data,
-            timestamp: savedUserMessage.createdAt
-        });
-
-        if (aiIsPresentInMessage) {
-
-            // Notify clients that AI is generating
-            io.to(socket.roomId).emit('ai-typing', { isTyping: true });
-
-            const prompt = message.replace('@ai', '');
-
-            const result = await generateResult(prompt);
-
-            const aiMessageData = {
-                message: result,
-                sender: {
-                    _id: 'ai',
-                    email: 'AI'
-                }
-            };
-
-            const savedAiMessage = await messageModel.create({
+            // Save incoming user message
+            const savedUserMessage = await messageModel.create({
                 project: socket.roomId,
-                sender: aiMessageData.sender,
-                message: result
+                sender: {
+                    _id: socket.user._id,
+                    email: socket.user.email
+                },
+                message: message,
+                attachment: data.attachment || null
             });
 
-            aiMessageData.timestamp = savedAiMessage.createdAt;
+            socket.broadcast.to(socket.roomId).emit('project-message', {
+                ...data,
+                timestamp: savedUserMessage.createdAt
+            });
 
-            io.to(socket.roomId).emit('project-message', aiMessageData)
-            
-            // Notify clients AI finished
+            if (aiIsPresentInMessage) {
+
+                // Notify clients that AI is generating
+                io.to(socket.roomId).emit('ai-typing', { isTyping: true });
+
+                const prompt = message.replace('@ai', '');
+
+                const result = await generateResult(prompt);
+
+                const aiMessageData = {
+                    message: result,
+                    sender: {
+                        _id: 'ai',
+                        email: 'AI'
+                    }
+                };
+
+                const savedAiMessage = await messageModel.create({
+                    project: socket.roomId,
+                    sender: aiMessageData.sender,
+                    message: result
+                });
+
+                aiMessageData.timestamp = savedAiMessage.createdAt;
+
+                io.to(socket.roomId).emit('project-message', aiMessageData)
+                
+                // Notify clients AI finished
+                io.to(socket.roomId).emit('ai-typing', { isTyping: false });
+
+                return
+            }
+        } catch (err) {
+            console.error("Project message error:", err);
             io.to(socket.roomId).emit('ai-typing', { isTyping: false });
-
-            return
         }
-
     })
+
+    socket.on('project-update', data => {
+        socket.broadcast.to(socket.roomId).emit('project-update', data);
+    });
 
     socket.on('disconnect', () => {
         console.log('user disconnected');
