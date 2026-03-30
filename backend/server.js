@@ -117,7 +117,19 @@ io.on('connection', socket => {
 
                 const prompt = message.replace('@ai', '');
 
-                const result = await generateResult(prompt);
+                const result = await generateResult(prompt, data.fileTree, data.currentFile);
+
+                // Parse AI result for potential fileTree updates to persist in DB
+                try {
+                    const parsedResult = JSON.parse(result);
+                    if (parsedResult.fileTree) {
+                        await projectModel.findByIdAndUpdate(socket.roomId, {
+                            fileTree: parsedResult.fileTree
+                        });
+                    }
+                } catch (parseErr) {
+                    // If not JSON, it's just a text message, no fileTree update needed
+                }
 
                 const aiMessageData = {
                     message: result,
@@ -148,7 +160,10 @@ io.on('connection', socket => {
         }
     })
 
-    socket.on('project-update', data => {
+    socket.on('project-update', async data => {
+        const project = await projectModel.findByIdAndUpdate(socket.roomId, {
+            fileTree: data.fileTree
+        }, { new: true });
         socket.broadcast.to(socket.roomId).emit('project-update', data);
     });
 

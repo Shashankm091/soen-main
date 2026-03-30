@@ -5,7 +5,11 @@ let openai = null;
 if (process.env.OPENAI_API_KEY) {
     openai = new OpenAI({
         baseURL: "https://openrouter.ai/api/v1",
-        apiKey: process.env.OPENAI_API_KEY
+        apiKey: process.env.OPENAI_API_KEY,
+        defaultHeaders: {
+            "HTTP-Referer": "http://localhost:3000",
+            "X-Title": "ChatApp",
+        }
     });
 }
 
@@ -64,7 +68,7 @@ response: {
 </example>
 `;
 
-export const generateResult = async (prompt) => {
+export const generateResult = async (prompt, fileTree = {}, currentFile = null) => {
     console.log("AI prompt received:", prompt);
     
     if (!openai) {
@@ -74,12 +78,23 @@ export const generateResult = async (prompt) => {
         });
     }
 
+    const contextMessage = `
+Project Structure:
+${Object.keys(fileTree).join('\n')}
+
+${currentFile && fileTree[currentFile] ? `
+Active File (${currentFile}) Content:
+${fileTree[currentFile].file ? fileTree[currentFile].file.contents : (typeof fileTree[currentFile] === 'string' ? fileTree[currentFile] : JSON.stringify(fileTree[currentFile]))}
+` : ''}
+    `;
+
     try {
         const response = await openai.chat.completions.create({
             model: "stepfun/step-3.5-flash:free", 
             messages: [
                 { role: "system", content: systemInstruction },
-                { role: "user", content: prompt }
+                { role: "system", content: "CRITICAL: You are aware of the project structure and the active file content provided below. Use it to answer the user's questions or suggest improvements." },
+                { role: "user", content: `Context:\n${contextMessage}\n\nTask: ${prompt}` }
             ],
             temperature: 0.4
         });
@@ -87,6 +102,17 @@ export const generateResult = async (prompt) => {
         return response.choices[0].message.content;
     } catch (error) {
         console.error("AI generation error:", error);
+        
+        const errorMsg = error.message || "";
+        
+        // Handle credit/balance/rate issues specifically
+        if (error.status === 429 || errorMsg.includes("credit") || errorMsg.includes("insufficient") || errorMsg.includes("balance")) {
+            return JSON.stringify({
+                text: "AI error: Your OpenRouter account may have insufficient credits or hit a rate limit. Some 'free' models require a small balance to work. Please check your OpenRouter dashboard or try another truly free model.",
+                fileTree: {},
+            });
+        }
+
         return JSON.stringify({
             text: "AI error: " + (error.message || "Something went wrong while generating the response."),
             fileTree: {},

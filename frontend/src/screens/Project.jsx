@@ -215,7 +215,10 @@ const Project = () => {
         const messageData = {
             message,
             sender: user,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            // Pass context if @ai is mentioned
+            fileTree: message.includes('@ai') ? fileTree : undefined,
+            currentFile: message.includes('@ai') ? currentFile : undefined
         };
         sendMessage('project-message', messageData)
         setMessages(prev => [ ...prev, messageData ])
@@ -379,9 +382,6 @@ const Project = () => {
                         setShowPreview(true);
                         setWebContainerLogs([]);
                         
-                        // Save to DB (only one person needs to do this, but for now simple is ok)
-                        saveFileTree(sanitizedTree)
-                        
                         setWebContainerLogs(prev => [...prev, `\n[System] Auto-running code. Booting WebContainer...\n`]);
                         getWebContainer().then(async (container) => {
                             setWebContainerLogs(prev => [...prev, `[System] WebContainer booted. Mounting files...\n`]);
@@ -475,7 +475,6 @@ const Project = () => {
         const ft = { ...fileTree };
         delete ft[filename];
         setFileTree(ft);
-        saveFileTree(ft);
         sendMessage('project-update', { fileTree: ft });
         const newOpenFiles = openFiles.filter(f => f !== filename);
         setOpenFiles(newOpenFiles);
@@ -497,7 +496,6 @@ const Project = () => {
         ft[newName] = ft[oldName];
         delete ft[oldName];
         setFileTree(ft);
-        saveFileTree(ft);
         sendMessage('project-update', { fileTree: ft });
 
         const newOpenFiles = openFiles.map(f => f === oldName ? newName : f);
