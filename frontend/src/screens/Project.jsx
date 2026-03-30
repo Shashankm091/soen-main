@@ -5,7 +5,7 @@ import axios from '../config/axios'
 import { initializeSocket, receiveMessage, sendMessage } from '../config/socket'
 import Markdown from 'markdown-to-jsx'
 import hljs from 'highlight.js';
-import { getWebContainer } from '../config/webcontainer'
+import { getWebContainer } from '../config/webContainer'
 import Editor from '@monaco-editor/react';
 import { Panel, Group, Separator } from "react-resizable-panels";
 import { Send, Users, X, Code, Play, Check, Copy, Terminal, MonitorPlay, MessageSquare, Plus, Loader2, Pencil, RotateCw, CheckCheck, Paperclip, Mic } from 'lucide-react';
