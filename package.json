@@ -2,7 +2,7 @@
   "name": "soen-main",
   "version": "1.0.0",
   "scripts": {
-    "start": "cd backend && npm start",
+    "start": "node backend/server.js",
     "build": "cd backend && npm install",
     "vercel-build": "cd frontend && npm install && npm run build"
   }
