@@ -2,12 +2,14 @@ import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: 465, // Use SSL Port 465
-    secure: true, // Use SSL
+    port: 465, 
+    secure: true, 
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
+    // Force IPv4 to avoid ENETUNREACH errors on cloud providers
+    family: 4 
 });
 
 export const sendPasswordResetEmail = async (email, token) => {
