@@ -103,7 +103,7 @@ const Home = () => {
                         return (
                         <div key={p._id}
                             onClick={() => {
-                                navigate(`/project`, {
+                                navigate(`/project/${p._id}`, {
                                     state: { project: p }
                                 })
                             }}

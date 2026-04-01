@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react'
 import { UserContext } from '../context/user.context'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import axios from '../config/axios'
 import { initializeSocket, receiveMessage, sendMessage } from '../config/socket'
 import Markdown from 'markdown-to-jsx'
@@ -79,6 +79,7 @@ const Project = () => {
 
     const location = useLocation()
     const navigate = useNavigate()
+    const { projectId } = useParams()
 
     const [ isSidePanelOpen, setIsSidePanelOpen ] = useState(false)
     const [ isModalOpen, setIsModalOpen ] = useState(false)
@@ -242,9 +243,9 @@ const Project = () => {
             messageObject = JSON.parse(message)
         } catch {
             try {
-                const firstBrace = message.indexOf('{');
-                const lastBrace = message.lastIndexOf('}');
-                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                const firstBrace = message?.indexOf('{');
+                const lastBrace = message?.lastIndexOf('}');
+                if (firstBrace !== undefined && firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
                     const jsonStr = message.substring(firstBrace, lastBrace + 1);
                     messageObject = JSON.parse(jsonStr)
                 } else {
@@ -253,16 +254,20 @@ const Project = () => {
             } catch (err) {
                 return (
                     <div className='bg-slate-800 text-slate-200 rounded p-3 text-sm'>
-                        <p>{message}</p>
+                        <p>{typeof message === 'string' ? message : "Invalid AI message format"}</p>
                     </div>
                 )
             }
         }
 
+        if (!messageObject || typeof messageObject !== 'object') {
+            return <div className='bg-slate-800 text-slate-200 rounded p-3 text-sm'>Malformed AI response</div>;
+        }
+
         return (
             <div className='bg-slate-800 text-slate-200 rounded p-3 text-sm'>
                 <Markdown
-                    children={messageObject.text}
+                    children={messageObject.text || "No text provided by AI"}
                     options={{
                         overrides: {
                             code: SyntaxHighlightedCode,
@@ -274,28 +279,32 @@ const Project = () => {
     }
 
     useEffect(() => {
-        if (location?.state?.project?._id) {
-            axios.get(`/projects/get-project/${location.state.project._id}`).then(res => {
+        const id = projectId || location?.state?.project?._id;
+        if (id) {
+            axios.get(`/projects/get-project/${id}`).then(res => {
                 setProject(res.data.project)
-                const ft = res.data.project.fileTree || {};
+                const ft = res.data.project?.fileTree || {};
                 setFileTree(ft)
                 const files = Object.keys(ft);
                 setOpenFiles(files);
                 if (files.length > 0) {
                     setCurrentFile(files[0]);
                 }
+            }).catch(err => {
+                console.error("Error fetching project:", err);
+                // navigate('/'); // Optional: redirect if project not found
             })
 
-            axios.get(`/projects/get-messages/${location.state.project._id}`).then(res => {
+            axios.get(`/projects/get-messages/${id}`).then(res => {
                 setMessages(res.data.messages || [])
                 setTimeout(scrollToBottom, 100);
             }).catch(err => console.error("Error fetching messages:", err))
         }
 
         axios.get('/users/all').then(res => {
-            setUsers(res.data.users)
+            setUsers(res.data.users || [])
         }).catch(err => console.log(err))
-    }, [])
+    }, [projectId])
 
     useEffect(() => {
         if (!project?._id) return;
@@ -620,7 +629,7 @@ const Project = () => {
                         </div>
                         
                         <div ref={messageBox} className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-[#374045] scrollbar-track-transparent">
-                            {messages?.map((msg, index) => {
+                            {(messages || [])?.map((msg, index) => {
                                 const isMe = msg?.sender?._id === user?._id?.toString();
                                 const isAi = msg?.sender?._id === 'ai';
                                 
@@ -726,7 +735,7 @@ const Project = () => {
                                     Explorer
                                 </div>
                                 <div className="flex-1 overflow-y-auto overflow-x-hidden text-[13px] text-[#cccccc] py-2">
-                                    {Object.keys(fileTree).sort().map((file) => (
+                                    {(fileTree ? Object.keys(fileTree).sort() : []).map((file) => (
                                         <div 
                                             key={file} 
                                             onClick={() => {
@@ -983,7 +992,7 @@ const Project = () => {
                         </div>
 
                         <div className="flex flex-col gap-2 mb-8 max-h-64 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700">
-                            {users?.filter(u => u?.email?.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
+                            {(users || [])?.filter(u => u?.email?.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
                                 <div key={u?._id || u} 
                                     className={`cursor-pointer border border-transparent rounded-lg p-3 flex gap-3 items-center transition-all ${selectedUserId.has(u?._id) ? 'bg-blue-600/10 border-blue-500/50' : 'hover:bg-slate-800'}`} 
                                     onClick={() => handleUserClick(u?._id)}>
