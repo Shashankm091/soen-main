@@ -11,10 +11,15 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendPasswordResetEmail = async (email, token) => {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        throw new Error('Email service is not configured (missing SMTP_USER or SMTP_PASS).');
+    }
+
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+    const senderEmail = process.env.SMTP_USER;
 
     const mailOptions = {
-        from: `"Antigravity App" <${process.env.SMTP_USER}>`,
+        from: `"SOEN App" <${senderEmail}>`,
         to: email,
         subject: 'Password Reset Request',
         html: `
