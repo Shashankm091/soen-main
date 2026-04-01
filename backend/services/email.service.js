@@ -2,8 +2,8 @@ import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: false, // true for 465, false for other ports
+    port: 465, // Use SSL Port 465
+    secure: true, // Use SSL
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -36,6 +36,6 @@ export const sendPasswordResetEmail = async (email, token) => {
         await transporter.sendMail(mailOptions);
     } catch (error) {
         console.error('Error sending email:', error);
-        throw new Error('Failed to send reset email. Please check your SMTP settings in .env');
+        throw new Error(error.message || 'Failed to send reset email. Please check your SMTP settings.');
     }
 };
