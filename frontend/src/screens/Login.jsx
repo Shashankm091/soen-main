@@ -75,6 +75,9 @@ const Login = () => {
                                 <label className="block text-sm font-medium text-slate-300" htmlFor="password">
                                     Password
                                 </label>
+                                <Link to="/forgot-password" title="Forgot Password? Reset it here!" className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                                    Forgot Password?
+                                </Link>
                             </div>
                             <div className="relative group">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 group-focus-within:text-blue-400 transition-colors" />

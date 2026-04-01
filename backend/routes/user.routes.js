@@ -24,6 +24,13 @@ router.get('/logout', authMiddleware.authUser, userController.logoutController);
 
 
 router.get('/all', authMiddleware.authUser, userController.getAllUsersController);
+router.post('/forgot-password',
+    body('email').isEmail().withMessage('Email must be a valid email address'),
+    userController.forgotPasswordController);
+router.post('/reset-password',
+    body('token').notEmpty().withMessage('Token is required'),
+    body('password').isLength({ min: 3 }).withMessage('Password must be at least 3 characters long'),
+    userController.resetPasswordController);
 
 
 export default router;

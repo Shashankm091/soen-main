@@ -5,6 +5,8 @@ import Register from '../screens/Register'
 import Home from '../screens/Home'
 import Project from '../screens/Project'
 import UserAuth from '../auth/UserAuth'
+import ForgotPassword from '../screens/ForgotPassword'
+import ResetPassword from '../screens/ResetPassword'
 
 const AppRoutes = () => {
     return (
@@ -15,6 +17,8 @@ const AppRoutes = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/project/:projectId" element={<UserAuth><Project /></UserAuth>} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
             </Routes>
 
         </BrowserRouter>
