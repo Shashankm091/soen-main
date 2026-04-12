@@ -1,0 +1,13 @@
+[test]
+# Explicitly tell Nixpacks how to build and start
+[phases.setup]
+nixPkgs = ["...", "nodejs"]
+
+[phases.install]
+cmds = ["npm install", "cd backend && npm install"]
+
+[phases.build]
+cmds = ["cd backend && npm install"]
+
+[start]
+cmd = "node backend/server.js"
