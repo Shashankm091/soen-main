@@ -3,9 +3,14 @@
  */
 export function parseApiError(err, fallback = 'Something went wrong.') {
     const d = err.response?.data
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
     if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
-        return 'Cannot reach the server. Is the API running on port 3000?'
+        if (isLocalhost) {
+            return 'Cannot reach the server. Is the backend API running locally on port 3000?'
+        } else {
+            return `Production connectivity error. Please check if VITE_API_URL is correctly set in Vercel and that your backend is running.`
+        }
     }
 
     if (d == null || d === '') {
@@ -34,3 +39,4 @@ export function parseApiError(err, fallback = 'Something went wrong.') {
 
     return fallback
 }
+

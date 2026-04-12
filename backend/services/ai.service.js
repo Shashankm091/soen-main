@@ -1,15 +1,12 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-let openai = null;
+let genAI = null;
+let model = null;
 
-if (process.env.OPENAI_API_KEY) {
-    openai = new OpenAI({
-        baseURL: "https://openrouter.ai/api/v1",
-        apiKey: process.env.OPENAI_API_KEY,
-        defaultHeaders: {
-            "HTTP-Referer": "http://localhost:3000",
-            "X-Title": "ChatApp",
-        }
+if (process.env.GOOGLE_API_KEY) {
+    genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
     });
 }
 
@@ -32,48 +29,20 @@ IMPORTANT RULES FOR YOUR OUTPUT:
 7. Never use directory-style filenames like "routes/index.js" as keys in the fileTree.
 
 Examples: 
-
-<example>
-user: "Create an express application"
-response: {
-    "text": "I have created the Express server codebase for you. Click 'Run Output' to start the application.",
+{
+    "text": "I have created the Express server codebase for you...",
     "fileTree": {
-        "app.js": {
-            "file": {
-                "contents": "const express = require('express');\\n\\nconst app = express();\\n\\napp.get('/', (req, res) => {\\n    res.send('Hello World!');\\n});\\n\\napp.listen(3000, () => {\\n    console.log('Server is running on port 3000');\\n});"
-            }
-        },
-        "package.json": {
-            "file": {
-                "contents": "{\\n  \\"name\\": \\"temp-server\\",\\n  \\"version\\": \\"1.0.0\\",\\n  \\"main\\": \\"app.js\\",\\n  \\"scripts\\": {\\n    \\"start\\": \\"node app.js\\"\\n  },\\n  \\"dependencies\\": {\\n    \\"express\\": \\"^4.21.2\\"\\n  }\\n}"
-            }
-        }
-    },
-    "buildCommand": {
-        "mainItem": "npm",
-        "commands": [ "install" ]
-    },
-    "startCommand": {
-        "mainItem": "npm",
-        "commands": [ "start" ]
+        "app.js": { "file": { "contents": "..." } }
     }
 }
-</example>
-
-<example>
-user: "Hello! How do you work?"
-response: {
-    "text": "Hello! I am your AI programming assistant. Ask me to build web applications, design UI components, or solve MERN stack bugs, and I will generate the code directly into your workspace editor!"
-}
-</example>
 `;
 
 export const generateResult = async (prompt, fileTree = {}, currentFile = null) => {
-    console.log("AI prompt received:", prompt);
+    console.log("AI prompt received (Gemini):", prompt);
     
-    if (!openai) {
+    if (!model) {
         return JSON.stringify({
-            text: "AI is not configured. Please set OPENAI_API_KEY in backend .env to use the @ai feature.",
+            text: "AI is not configured. Please set GOOGLE_API_KEY in backend .env to use the Gemini feature.",
             fileTree: {},
         });
     }
@@ -89,26 +58,23 @@ ${fileTree[currentFile].file ? fileTree[currentFile].file.contents : (typeof fil
     `;
 
     try {
-        const response = await openai.chat.completions.create({
-            model: "stepfun/step-3.5-flash:free", 
-            messages: [
-                { role: "system", content: systemInstruction },
-                { role: "system", content: "CRITICAL: You are aware of the project structure and the active file content provided below. Use it to answer the user's questions or suggest improvements." },
-                { role: "user", content: `Context:\n${contextMessage}\n\nTask: ${prompt}` }
-            ],
-            temperature: 0.4
-        });
+        const fullPrompt = `${systemInstruction}\n\nContext:\n${contextMessage}\n\nTask: ${prompt}`;
         
-        return response.choices[0].message.content;
+        const result = await model.generateContent(fullPrompt);
+        const responseText = result.response.text();
+        
+        // Ensure we return the raw text if it's already JSON-like, 
+        // Gemini usually doesn't wrap in quotes if asked for JSON but we'll see.
+        return responseText;
+        
     } catch (error) {
-        console.error("AI generation error:", error);
+        console.error("Gemini generation error:", error);
         
         const errorMsg = error.message || "";
         
-        // Handle credit/balance/rate issues specifically
-        if (error.status === 429 || errorMsg.includes("credit") || errorMsg.includes("insufficient") || errorMsg.includes("balance")) {
+        if (errorMsg.includes("quota") || errorMsg.includes("API_KEY_INVALID")) {
             return JSON.stringify({
-                text: "AI error: Your OpenRouter account may have insufficient credits or hit a rate limit. Some 'free' models require a small balance to work. Please check your OpenRouter dashboard or try another truly free model.",
+                text: "AI error: Your Google API Key is invalid or you have hit a quota limit. Please check your Google AI Studio dashboard.",
                 fileTree: {},
             });
         }
