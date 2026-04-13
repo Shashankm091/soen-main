@@ -1,13 +1,23 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
+import 'dotenv/config';
 
-let genAI = null;
-let model = null;
+let openai = null;
 
-if (process.env.GOOGLE_API_KEY) {
-    genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-    model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
-    });
+const getOpenAIClient = () => {
+    if (openai) return openai;
+    
+    if (process.env.OPENAI_API_KEY) {
+        openai = new OpenAI({
+            baseURL: "https://openrouter.ai/api/v1",
+            apiKey: process.env.OPENAI_API_KEY,
+            defaultHeaders: {
+                "HTTP-Referer": "https://real-chatbot.vercel.app",
+                "X-Title": "SOEN Chat App",
+            }
+        });
+        return openai;
+    }
+    return null;
 }
 
 const systemInstruction = `You are an expert in MERN stack development with 10 years of experience. You always write highly modular, scalable, and maintainable code. Your architecture follows best practices, correctly handles errors and edge cases, and includes necessary comments.
@@ -21,10 +31,10 @@ IMPORTANT RULES FOR YOUR OUTPUT:
    - If the user asks a CODING question (requesting apps, scripts, or UI components), put ALL code inside the "fileTree" object. 
    - **DO NOT put any markdown code blocks (like \`\`\`javascript) inside the "text" field.** The "text" field should only contain a brief 1-2 sentence conversational explanation.
 5. **App Generation Rules**: 
-   - If the user explicitly asks for a simple HTML/CSS/JS app, generate ONLY \`index.html\`, \`style.css\`, and \`script.js\`. **DO NOT** generate a \`package.json\`.
-   - If the user asks for a React/Vite app, YOU MUST produce a full React + Vite workspace. Include a VALID \`package.json\`.
-   - If the user asks for a Node.js/Express app (or uses ES6 \`import\` syntax), YOU MUST include a VALID \`package.json\` with \`"type": "module"\`. YOU MUST explicitly include \`"express"\` and other used dependencies in the \`"dependencies"\` object.
-   - **CRITICAL STRING ESCAPING RULE:** Because you are transmitting data inside a strict JSON structure, you MUST use SINGLE QUOTES (\`'\`) for all HTML attributes, CSS values, and JS strings inside your \`contents\` body. NEVER use double quotes (\`"\`) inside code contents to prevent catastrophic JSON parsing failures.
+   - If the user explicitly asks for a simple HTML/CSS/JS app, generate ONLY index.html, style.css, and script.js. **DO NOT** generate a package.json.
+   - If the user asks for a React/Vite app, YOU MUST produce a full React + Vite workspace. Include a VALID package.json.
+   - If the user asks for a Node.js/Express app (or uses ES6 import syntax), YOU MUST include a VALID package.json with "type": "module". YOU MUST explicitly include "express" and other used dependencies in the "dependencies" object.
+   - **CRITICAL STRING ESCAPING RULE:** Because you are transmitting data inside a strict JSON structure, you MUST use SINGLE QUOTES (') for all HTML attributes, CSS values, and JS strings inside your contents body. NEVER use double quotes (") inside code contents to prevent catastrophic JSON parsing failures.
 6. **JSON Validity**: Any JSON file you generate MUST be exactly valid JSON.
 7. Never use directory-style filenames like "routes/index.js" as keys in the fileTree.
 
@@ -38,11 +48,12 @@ Examples:
 `;
 
 export const generateResult = async (prompt, fileTree = {}, currentFile = null) => {
-    console.log("AI prompt received (Gemini):", prompt);
+    console.log("AI prompt received (OpenRouter):", prompt);
     
-    if (!model) {
+    const client = getOpenAIClient();
+    if (!client) {
         return JSON.stringify({
-            text: "AI is not configured. Please set GOOGLE_API_KEY in backend .env to use the Gemini feature.",
+            text: "AI is not configured. Please set OPENAI_API_KEY in backend .env to use the OpenRouter feature.",
             fileTree: {},
         });
     }
@@ -58,23 +69,25 @@ ${fileTree[currentFile].file ? fileTree[currentFile].file.contents : (typeof fil
     `;
 
     try {
-        const fullPrompt = `${systemInstruction}\n\nContext:\n${contextMessage}\n\nTask: ${prompt}`;
-        
-        const result = await model.generateContent(fullPrompt);
-        const responseText = result.response.text();
-        
-        // Ensure we return the raw text if it's already JSON-like, 
-        // Gemini usually doesn't wrap in quotes if asked for JSON but we'll see.
+        const response = await client.chat.completions.create({
+            model: "openai/gpt-oss-120b:free",
+            messages: [
+                { role: "system", content: systemInstruction },
+                { role: "user", content: `Context:\n${contextMessage}\n\nTask: ${prompt}` }
+            ]
+        });
+
+        const responseText = response.choices[0].message.content;
         return responseText;
         
     } catch (error) {
-        console.error("Gemini generation error:", error);
+        console.error("OpenRouter generation error:", error);
         
         const errorMsg = error.message || "";
         
-        if (errorMsg.includes("quota") || errorMsg.includes("API_KEY_INVALID")) {
+        if (errorMsg.includes("quota") || errorMsg.includes("API_KEY_INVALID") || errorMsg.includes("401")) {
             return JSON.stringify({
-                text: "AI error: Your Google API Key is invalid or you have hit a quota limit. Please check your Google AI Studio dashboard.",
+                text: "AI error: Your OpenRouter API Key is invalid or you have hit a quota limit. Please check your OpenRouter dashboard.",
                 fileTree: {},
             });
         }
