@@ -363,6 +363,7 @@ const Project = () => {
                     if (message.fileTree) {
                         const sanitizedTree = {};
                         for (const [path, data] of Object.entries(message.fileTree)) {
+                            const cleanPath = path.replace(/['"]/g, '').trim();
                             let contents = "";
                             if (typeof data === 'string') {
                                 contents = data;
@@ -375,7 +376,7 @@ const Project = () => {
                             } else {
                                 contents = String(data);
                             }
-                            sanitizedTree[path] = { file: { contents } };
+                            sanitizedTree[cleanPath] = { file: { contents } };
                         }
                         
                         setFileTree(prev => ({ ...prev, ...sanitizedTree }))
@@ -394,7 +395,7 @@ const Project = () => {
                         setWebContainerLogs(prev => [...prev, `\n[System] Auto-running code. Booting WebContainer...\n`]);
                         getWebContainer().then(async (container) => {
                             setWebContainerLogs(prev => [...prev, `[System] WebContainer booted. Mounting files...\n`]);
-                            const wcTree = resolveWebContainerTree(message.fileTree)
+                            const wcTree = resolveWebContainerTree(sanitizedTree)
                             await container.mount(wcTree)
                             setWebContainerLogs(prev => [...prev, `[System] Files mounted successfully.\n`]);
                             
@@ -444,7 +445,11 @@ const Project = () => {
                                 }
                                 setIsRunning(false);
                             });
-                        })
+                        }).catch(err => {
+                            console.error("WebContainer Error:", err);
+                            setWebContainerLogs(prev => [...prev, `\n[Error] WebContainer failed: ${err.message}\n`]);
+                            setIsRunning(false);
+                        });
                     }
                 } catch (err) {
                     console.error("Failed to parse AI message JSON:", err)
