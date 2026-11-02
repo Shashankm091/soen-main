@@ -5,7 +5,7 @@ let openai = null;
 
 const getOpenAIClient = () => {
     if (openai) return openai;
-    
+
     if (process.env.OPENAI_API_KEY) {
         openai = new OpenAI({
             baseURL: "https://openrouter.ai/api/v1",
@@ -49,7 +49,7 @@ Examples:
 
 export const generateResult = async (prompt, fileTree = {}, currentFile = null) => {
     console.log("AI prompt received (OpenRouter):", prompt);
-    
+
     const client = getOpenAIClient();
     if (!client) {
         return JSON.stringify({
@@ -70,7 +70,7 @@ ${fileTree[currentFile].file ? fileTree[currentFile].file.contents : (typeof fil
 
     try {
         const response = await client.chat.completions.create({
-            model: "openai/gpt-oss-120b:free",
+            model: "nvidia/nemotron-3.5-super-vl:free",
             messages: [
                 { role: "system", content: systemInstruction },
                 { role: "user", content: `Context:\n${contextMessage}\n\nTask: ${prompt}` }
@@ -79,12 +79,12 @@ ${fileTree[currentFile].file ? fileTree[currentFile].file.contents : (typeof fil
 
         const responseText = response.choices[0].message.content;
         return responseText;
-        
+
     } catch (error) {
         console.error("OpenRouter generation error:", error);
-        
+
         const errorMsg = error.message || "";
-        
+
         if (errorMsg.includes("quota") || errorMsg.includes("API_KEY_INVALID") || errorMsg.includes("401")) {
             return JSON.stringify({
                 text: "AI error: Your OpenRouter API Key is invalid or you have hit a quota limit. Please check your OpenRouter dashboard.",
